@@ -14,6 +14,10 @@ class TransactionRepository(private val transactionDao: TransactionDao) {
         transactionDao.updateTransaction(transaction)
     }
 
+    suspend fun deleteTransaction(transaction: Transaction) {
+        transactionDao.deleteTransaction(transaction)
+    }
+
     suspend fun getTransactionById(id: Long): Transaction? {
         return transactionDao.getTransactionById(id)
     }

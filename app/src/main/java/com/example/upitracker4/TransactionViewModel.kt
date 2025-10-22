@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 class TransactionViewModel(private val repository: TransactionRepository) : ViewModel() {
 
     val allTransactions: Flow<List<Transaction>> = repository.allTransactions
+    val pendingTransactions: Flow<List<Transaction>> = repository.getTransactionsByStatus("Pending")
 
     fun insert(transaction: Transaction) = viewModelScope.launch {
         repository.insertTransaction(transaction)
@@ -18,6 +19,11 @@ class TransactionViewModel(private val repository: TransactionRepository) : View
 
     fun update(transaction: Transaction) = viewModelScope.launch {
         repository.updateTransaction(transaction)
+    }
+
+    // --- NEW ---
+    fun delete(transaction: Transaction) = viewModelScope.launch {
+        repository.deleteTransaction(transaction)
     }
 }
 
