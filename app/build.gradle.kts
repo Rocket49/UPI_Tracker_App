@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.upitracker4"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.upitracker4"
@@ -48,6 +46,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended:1.6.7")
 
     // Room
     implementation("androidx.room:room-runtime:2.6.1")

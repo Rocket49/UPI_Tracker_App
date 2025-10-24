@@ -21,12 +21,19 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getTransactionById(id: Long): Transaction?
 
-    @Query("SELECT * FROM transactions ORDER BY timestamp DESC")
-    fun getAllTransactions(): Flow<List<Transaction>>
+    // UPDATED: Now includes "extra" status for the main screen.
+    @Query("SELECT * FROM transactions WHERE status IN ('Pending', 'extra') ORDER BY timestamp DESC")
+    fun getPendingAndExtraTransactions(): Flow<List<Transaction>>
 
-    @Query("SELECT * FROM transactions WHERE status = :status ORDER BY timestamp DESC")
-    fun getTransactionsByStatus(status: String): Flow<List<Transaction>>
+    @Query("SELECT * FROM transactions WHERE status = 'Paid' ORDER BY timestamp DESC")
+    fun getPaidTransactions(): Flow<List<Transaction>>
 
-    @Query("SELECT * FROM transactions WHERE status = 'Pending' AND (:currentTime - timestamp) <= :timeWindow")
-    suspend fun getPendingTransactions(currentTime: Long, timeWindow: Long): List<Transaction>
+    @Query("SELECT COUNT(id) FROM transactions WHERE status = 'Paid'")
+    fun getPaidTransactionsCount(): Flow<Int>
+
+    @Query("SELECT SUM(receivedAmount) FROM transactions WHERE status = 'Paid'")
+    fun getTotalAmountReceived(): Flow<Double?>
+    
+    @Query("SELECT * FROM transactions WHERE status = 'Pending'")
+    suspend fun getPendingTransactions(): List<Transaction>
 }

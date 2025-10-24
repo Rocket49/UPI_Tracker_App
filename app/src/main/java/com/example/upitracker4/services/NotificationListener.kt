@@ -17,8 +17,7 @@ class NotificationListener : NotificationListenerService() {
 
     private val allowedApps = setOf(
         "com.google.android.apps.nbu.paisa.user", // Google Pay
-        "com.phonepe.app",                       // PhonePe
-        "net.one97.paytm"                        // Paytm
+        "com.phonepe.app"                        // PhonePe
     )
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -28,20 +27,13 @@ class NotificationListener : NotificationListenerService() {
             return
         }
 
-        Log.d("NotificationListener", "--- New UPI Notification Received ---")
-        Log.d("NotificationListener", "Package: $packageName")
+        coroutineScope.launch {
+            val amount = NotificationParser.parse(packageName, sbn.notification)
 
-        val parsedData = NotificationParser.parse(sbn.notification.extras)
+            if (amount != null) {
+                Log.d("NotificationListener", "Parser found a transaction for \"$amount\" from $packageName")
 
-        if (parsedData != null) {
-            val (amount, transactionId) = parsedData
-            Log.d("NotificationListener", "Parsed Amount: $amount, Transaction ID: $transactionId")
-
-            coroutineScope.launch {
-                // --- REVERTED: Using a fixed 10-minute time window (600,000 milliseconds) ---
-                val timeWindowMillis = 600000L
-
-                val pendingTransactions = repository.getPendingTransactions(System.currentTimeMillis(), timeWindowMillis)
+                val pendingTransactions = repository.getPendingTransactions()
                 val matchedTransaction = pendingTransactions.firstOrNull { it.expectedAmount == amount }
 
                 if (matchedTransaction != null) {
@@ -49,16 +41,25 @@ class NotificationListener : NotificationListenerService() {
                     val updatedTransaction = matchedTransaction.copy(
                         status = "Paid",
                         receivedAmount = amount,
-                        transactionId = transactionId,
                         upiApp = sbn.packageName
                     )
                     repository.updateTransaction(updatedTransaction)
                 } else {
-                    Log.d("NotificationListener", "No matching pending transaction found for amount: $amount")
+                    // --- UPDATED: Use 'extra' status as requested ---
+                    Log.d("NotificationListener", "No matching pending transaction found. Logging as new extra payment.")
+                    val newTransaction = Transaction(
+                        expectedAmount = 0.0, 
+                        receivedAmount = amount,
+                        status = "extra", // Set status to extra
+                        timestamp = System.currentTimeMillis(),
+                        upiApp = sbn.packageName
+                    )
+                    repository.insertTransaction(newTransaction)
+                    // --- END UPDATE ---
                 }
+            } else {
+                 Log.d("NotificationListener", "Parser ignored notification from $packageName.")
             }
-        } else {
-             Log.d("NotificationListener", "Parser did not find a valid amount in notification from $packageName.")
         }
     }
 

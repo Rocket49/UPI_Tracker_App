@@ -11,6 +11,5 @@ data class Transaction(
     val receivedAmount: Double? = null,
     val status: String, // e.g., "Pending", "Paid", "Cancelled"
     val timestamp: Long = System.currentTimeMillis(),
-    val upiApp: String? = null,
-    val transactionId: String? = null
+    val upiApp: String? = null
 )

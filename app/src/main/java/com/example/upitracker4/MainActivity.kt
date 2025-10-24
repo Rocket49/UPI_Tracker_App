@@ -14,11 +14,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -26,6 +31,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.upitracker4.data.Transaction
+import com.example.upitracker4.ui.HistoryScreen
 import com.example.upitracker4.ui.SettingsScreen
 import com.example.upitracker4.ui.theme.UPITracker4Theme
 import kotlinx.coroutines.flow.collectLatest
@@ -38,6 +44,14 @@ class MainActivity : ComponentActivity() {
         TransactionViewModelFactory((application as UpiTrackerApplication).repository)
     }
 
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        SettingsViewModelFactory(application, (application as UpiTrackerApplication).settingsManager)
+    }
+
+    private val historyViewModel: HistoryViewModel by viewModels {
+        HistoryViewModelFactory((application as UpiTrackerApplication).repository)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -45,7 +59,6 @@ class MainActivity : ComponentActivity() {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
 
-        // Observe the keepScreenOn setting
         lifecycleScope.launch {
             (application as UpiTrackerApplication).settingsManager.keepScreenOnFlow.collectLatest {
                 if (it) {
@@ -58,10 +71,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             UPITracker4Theme {
-                val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = "tracker") {
-                    composable("tracker") { TrackerScreen(navController, transactionViewModel) }
-                    composable("settings") { SettingsScreen(navController) }
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    val navController = rememberNavController()
+                    NavHost(navController = navController, startDestination = "tracker") {
+                        composable("tracker") { TrackerScreen(navController, transactionViewModel) }
+                        composable("settings") { SettingsScreen(settingsViewModel) }
+                        composable("history") { HistoryScreen(historyViewModel) }
+                    }
                 }
             }
         }
@@ -77,7 +93,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackerScreen(navController: androidx.navigation.NavController, viewModel: TransactionViewModel) {
-    val transactions by viewModel.pendingTransactions.collectAsState(initial = emptyList())
+    val transactions by viewModel.pendingAndUnexpectedTransactions.collectAsState(initial = emptyList())
     var expectedAmount by remember { mutableStateOf("") }
 
     Scaffold(
@@ -85,6 +101,9 @@ fun TrackerScreen(navController: androidx.navigation.NavController, viewModel: T
             TopAppBar(
                 title = { Text("UPI Tracker") },
                 actions = {
+                    IconButton(onClick = { navController.navigate("history") }) {
+                        Icon(Icons.Default.History, contentDescription = "History")
+                    }
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
@@ -120,7 +139,7 @@ fun TrackerScreen(navController: androidx.navigation.NavController, viewModel: T
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyColumn {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(transactions) { transaction ->
                     TransactionItem(transaction = transaction, viewModel = viewModel)
                 }
@@ -131,26 +150,47 @@ fun TrackerScreen(navController: androidx.navigation.NavController, viewModel: T
 
 @Composable
 fun TransactionItem(transaction: Transaction, viewModel: TransactionViewModel) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Amount: ₹${transaction.expectedAmount}", style = MaterialTheme.typography.bodyLarge)
-                Text(text = "Status: ${transaction.status}", style = MaterialTheme.typography.bodyMedium)
-                if (transaction.receivedAmount != null) {
-                    Text(text = "Received: ₹${transaction.receivedAmount}", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = { viewModel.delete(transaction) },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Cancel")
+    val isExtra = transaction.status == "extra"
+    
+    val statusColor = when (transaction.status) {
+        "Pending" -> Color(0xFFFFA000)
+        "extra" -> Color(0xFF2196F3) // Blue for extra payments
+        else -> Color.Gray
+    }
+    
+    val statusIcon = when (transaction.status) {
+        "Pending" -> Icons.Default.HourglassTop
+        "extra" -> Icons.Default.AddCircle
+        else -> Icons.Default.History
+    }
+    
+    // --- THE DEFINITIVE FIX --- 
+    // For 'extra' payments, show the receivedAmount. For 'Pending', show expectedAmount.
+    val amountText = if (isExtra) {
+        "₹${transaction.receivedAmount}"
+    } else {
+        "₹${transaction.expectedAmount}"
+    }
+
+    val statusText = if (isExtra) {
+        "extra"
+    } else {
+        "Pending"
+    }
+    // --- END FIX --- 
+
+    ListItem(
+        headlineContent = { Text(amountText, style = MaterialTheme.typography.bodyLarge) },
+        supportingContent = {
+            Text(statusText, style = MaterialTheme.typography.bodyMedium, color = statusColor)
+        },
+        leadingContent = {
+            Icon(statusIcon, contentDescription = transaction.status, tint = statusColor)
+        },
+        trailingContent = {
+            IconButton(onClick = { viewModel.delete(transaction) }) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete Transaction", tint = MaterialTheme.colorScheme.error)
             }
         }
-    }
+    )
 }
