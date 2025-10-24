@@ -4,8 +4,8 @@ import kotlinx.coroutines.flow.Flow
 
 class TransactionRepository(private val transactionDao: TransactionDao) {
 
-    suspend fun insertTransaction(transaction: Transaction) {
-        transactionDao.insertTransaction(transaction)
+    suspend fun insertTransaction(transaction: Transaction): Long {
+        return transactionDao.insertTransaction(transaction)
     }
 
     suspend fun updateTransaction(transaction: Transaction) {
@@ -20,24 +20,23 @@ class TransactionRepository(private val transactionDao: TransactionDao) {
         return transactionDao.getTransactionById(id)
     }
 
-    // CORRECTED to getPendingAndExtraTransactions
     fun getPendingAndExtraTransactions(): Flow<List<Transaction>> {
         return transactionDao.getPendingAndExtraTransactions()
     }
 
-    fun getPaidTransactions(): Flow<List<Transaction>> {
-        return transactionDao.getPaidTransactions()
+    fun getPaidTransactions(startTime: Long): Flow<List<Transaction>> {
+        return transactionDao.getPaidTransactions(startTime)
     }
 
-    fun getPaidTransactionsCount(): Flow<Int> {
-        return transactionDao.getPaidTransactionsCount()
+    fun getPaidTransactionsCount(startTime: Long): Flow<Int> {
+        return transactionDao.getPaidTransactionsCount(startTime)
     }
 
-    fun getTotalAmountReceived(): Flow<Double?> {
-        return transactionDao.getTotalAmountReceived()
+    fun getTotalAmountReceived(startTime: Long): Flow<Double?> {
+        return transactionDao.getTotalAmountReceived(startTime)
     }
 
-    suspend fun getPendingTransactions(): List<Transaction> {
-        return transactionDao.getPendingTransactions()
+    suspend fun getPendingAndFollowUpTransactions(): List<Transaction> {
+        return transactionDao.getPendingAndFollowUpTransactions()
     }
 }

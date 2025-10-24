@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -19,6 +20,7 @@ class SettingsManager(context: Context) {
     companion object {
         val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         val SELECTED_UPI_APPS_KEY = stringSetPreferencesKey("selected_upi_apps")
+        val TIMER_DURATION_KEY = intPreferencesKey("timer_duration")
     }
 
     val keepScreenOnFlow: Flow<Boolean> = dataStore.data
@@ -40,6 +42,17 @@ class SettingsManager(context: Context) {
     suspend fun setSelectedUpiApps(selectedApps: Set<String>) {
         dataStore.edit {
             it[SELECTED_UPI_APPS_KEY] = selectedApps
+        }
+    }
+
+    val timerDurationFlow: Flow<Int> = dataStore.data
+        .map {
+            it[TIMER_DURATION_KEY] ?: 3 // Default to 3 minutes
+        }
+
+    suspend fun setTimerDuration(duration: Int) {
+        dataStore.edit {
+            it[TIMER_DURATION_KEY] = duration
         }
     }
 }

@@ -1,94 +1,81 @@
 package com.example.upitracker4.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.upitracker4.SettingsViewModel
-import com.example.upitracker4.utils.AppInfo
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel) {
-    val selectedApps by viewModel.selectedUpiApps.collectAsState()
-    var tempSelectedApps by remember { mutableStateOf(selectedApps) }
-    val keepScreenOn by viewModel.keepScreenOn.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
-
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Keep Screen On", modifier = Modifier.weight(1f))
-            Switch(
-                checked = keepScreenOn,
-                onCheckedChange = { viewModel.setKeepScreenOn(it) }
+fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
-
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Search Apps") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
-
-        val filteredApps = viewModel.installedApps.filter {
-            it.name.contains(searchQuery, ignoreCase = true) || it.packageName.contains(searchQuery, ignoreCase = true)
-        }
-
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(filteredApps) { app ->
-                AppCheckbox(
-                    app = app,
-                    isSelected = tempSelectedApps.contains(app.packageName),
-                    onCheckedChange = { isChecked ->
-                        tempSelectedApps = if (isChecked) {
-                            tempSelectedApps + app.packageName
-                        } else {
-                            tempSelectedApps - app.packageName
-                        }
-                    }
-                )
-            }
-        }
-
-        if (tempSelectedApps != selectedApps) {
-            viewModel.updateSelectedUpiApps(tempSelectedApps)
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item { GeneralSettings(viewModel) }
         }
     }
 }
 
 @Composable
-fun AppCheckbox(
-    app: AppInfo,
-    isSelected: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun GeneralSettings(viewModel: SettingsViewModel) {
+    val keepScreenOn by viewModel.keepScreenOn.collectAsState()
+    val timerDuration by viewModel.timerDuration.collectAsState()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Checkbox(
-            checked = isSelected,
-            onCheckedChange = onCheckedChange
-        )
-        Text(text = app.name, modifier = Modifier.padding(start = 16.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("General", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Keep Screen On", modifier = Modifier.weight(1f))
+                Switch(checked = keepScreenOn, onCheckedChange = { viewModel.setKeepScreenOn(it) })
+            }
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            OutlinedTextField(
+                value = timerDuration.toString(),
+                onValueChange = { value ->
+                    val intValue = value.toIntOrNull() ?: 3
+                    viewModel.setTimerDuration(intValue)
+                },
+                label = { Text("Pending Timer (minutes)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }

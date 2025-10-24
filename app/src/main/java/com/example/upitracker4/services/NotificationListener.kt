@@ -33,7 +33,8 @@ class NotificationListener : NotificationListenerService() {
             if (amount != null) {
                 Log.d("NotificationListener", "Parser found a transaction for \"$amount\" from $packageName")
 
-                val pendingTransactions = repository.getPendingTransactions()
+                // CORRECTED: Call the correctly named function
+                val pendingTransactions = repository.getPendingAndFollowUpTransactions()
                 val matchedTransaction = pendingTransactions.firstOrNull { it.expectedAmount == amount }
 
                 if (matchedTransaction != null) {
@@ -45,17 +46,15 @@ class NotificationListener : NotificationListenerService() {
                     )
                     repository.updateTransaction(updatedTransaction)
                 } else {
-                    // --- UPDATED: Use 'extra' status as requested ---
                     Log.d("NotificationListener", "No matching pending transaction found. Logging as new extra payment.")
                     val newTransaction = Transaction(
                         expectedAmount = 0.0, 
                         receivedAmount = amount,
-                        status = "extra", // Set status to extra
+                        status = "extra",
                         timestamp = System.currentTimeMillis(),
                         upiApp = sbn.packageName
                     )
                     repository.insertTransaction(newTransaction)
-                    // --- END UPDATE ---
                 }
             } else {
                  Log.d("NotificationListener", "Parser ignored notification from $packageName.")

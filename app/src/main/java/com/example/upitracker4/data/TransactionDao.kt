@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TransactionDao {
     @Insert
-    suspend fun insertTransaction(transaction: Transaction)
+    suspend fun insertTransaction(transaction: Transaction): Long
 
     @Update
     suspend fun updateTransaction(transaction: Transaction)
@@ -21,19 +21,19 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getTransactionById(id: Long): Transaction?
 
-    // UPDATED: Now includes "extra" status for the main screen.
-    @Query("SELECT * FROM transactions WHERE status IN ('Pending', 'extra') ORDER BY timestamp DESC")
+    @Query("SELECT * FROM transactions WHERE status IN ('Pending', 'extra', 'Follow-up') ORDER BY timestamp DESC")
     fun getPendingAndExtraTransactions(): Flow<List<Transaction>>
 
-    @Query("SELECT * FROM transactions WHERE status = 'Paid' ORDER BY timestamp DESC")
-    fun getPaidTransactions(): Flow<List<Transaction>>
+    // CORRECTED: Now accepts a start time to filter transactions.
+    @Query("SELECT * FROM transactions WHERE status = 'Paid' AND timestamp >= :startTime ORDER BY timestamp DESC")
+    fun getPaidTransactions(startTime: Long): Flow<List<Transaction>>
 
-    @Query("SELECT COUNT(id) FROM transactions WHERE status = 'Paid'")
-    fun getPaidTransactionsCount(): Flow<Int>
+    @Query("SELECT COUNT(id) FROM transactions WHERE status = 'Paid' AND timestamp >= :startTime")
+    fun getPaidTransactionsCount(startTime: Long): Flow<Int>
 
-    @Query("SELECT SUM(receivedAmount) FROM transactions WHERE status = 'Paid'")
-    fun getTotalAmountReceived(): Flow<Double?>
+    @Query("SELECT SUM(receivedAmount) FROM transactions WHERE status = 'Paid' AND timestamp >= :startTime")
+    fun getTotalAmountReceived(startTime: Long): Flow<Double?>
     
-    @Query("SELECT * FROM transactions WHERE status = 'Pending'")
-    suspend fun getPendingTransactions(): List<Transaction>
+    @Query("SELECT * FROM transactions WHERE status IN ('Pending', 'Follow-up')")
+    suspend fun getPendingAndFollowUpTransactions(): List<Transaction>
 }
