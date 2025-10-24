@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 
 class TransactionViewModel(application: Application, private val repository: TransactionRepository, private val settingsManager: SettingsManager) : AndroidViewModel(application) {
 
+    // CORRECTED: Now calls the correctly named function.
     val pendingAndExtraTransactions: Flow<List<Transaction>> = repository.getPendingAndExtraTransactions()
 
     private val timerJobs = mutableMapOf<Long, Job>()

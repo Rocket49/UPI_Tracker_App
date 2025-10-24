@@ -50,6 +50,8 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel) {
 fun GeneralSettings(viewModel: SettingsViewModel) {
     val keepScreenOn by viewModel.keepScreenOn.collectAsState()
     val timerDuration by viewModel.timerDuration.collectAsState()
+    // Use a local state for the text field to allow for temporary empty states
+    var timerText by remember { mutableStateOf(timerDuration.toString()) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -67,10 +69,13 @@ fun GeneralSettings(viewModel: SettingsViewModel) {
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
             OutlinedTextField(
-                value = timerDuration.toString(),
+                value = timerText,
                 onValueChange = { value ->
-                    val intValue = value.toIntOrNull() ?: 3
-                    viewModel.setTimerDuration(intValue)
+                    timerText = value
+                    // Only update the viewmodel if the value is a valid integer
+                    value.toIntOrNull()?.let {
+                        viewModel.setTimerDuration(it)
+                    }
                 },
                 label = { Text("Pending Timer (minutes)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
